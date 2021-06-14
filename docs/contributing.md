@@ -201,6 +201,19 @@ make e2e-k8s test=<test-name>
 This will run the `replica_set` E2E test which is a simple test which installs a
 MongoDB Replica Set and asserts that the deployed server can be connected to.
 
+
+### Run the test locally with go test & Telepresence
+```sh
+make e2e-telepresence test=<test-name>
+```
+
+This method uses telepresence to allow connectivity as if your local machine is in the kubernetes cluster,
+there will be full MongoDB connectivity using `go test` locally.
+
+Note: you must install [telepresence](https://www.getambassador.io/docs/telepresence/latest/quick-start/) before using this method.
+
+If on MacOS, you can run `make install-prerequisites-macos` which will perform the installation.
+
 ## Troubleshooting
 When you run a test locally, if the `e2e-test` pod is present, you will have to
 first manually delete it; failing to do so will cause the `e2e-test` pod to fail.

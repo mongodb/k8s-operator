@@ -8,6 +8,9 @@ var objectModifiedText = "the object has been modified; please apply your change
 
 // IsTransientError returns a boolean indicating if a given error is transient.
 func IsTransientError(err error) bool {
+	if err == nil {
+		return false
+	}
 	return IsTransientMessage(err.Error())
 }
 

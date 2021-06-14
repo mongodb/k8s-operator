@@ -64,6 +64,15 @@ fmt:
 vet:
 	go vet ./...
 
+# Run e2e tests locally using go build while also setting up a proxy in the shell to allow
+# the test to run as if it were inside the cluster. This enables mongodb connectivity while running locally.
+e2e-telepresence: install
+	telepresence connect; \
+	telepresence status; \
+	eval $$(scripts/dev/get_e2e_env_vars.py $(cleanup)); \
+    go test -v -timeout=30m -failfast ./test/e2e/$(test); \
+	telepresence quit
+
 # Run e2e test by deploying test image in kubernetes.
 e2e-k8s: install e2e-image
 	python scripts/dev/e2e.py --perform-cleanup --test $(test)
@@ -126,3 +135,5 @@ rm -rf $$TMP_DIR ;\
 }
 endef
 
+install-prerequisites-macos:
+	scripts/dev/install_prerequisites.sh

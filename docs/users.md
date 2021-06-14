@@ -45,7 +45,7 @@ You cannot disable SCRAM authentication.
 
    ```yaml
    ---
-   apiVersion: mongodb.com/v1
+   apiVersion: mongodbcommunity.mongodb.com/v1
    kind: MongoDBCommunity
    metadata:
      name: example-scram-mongodb

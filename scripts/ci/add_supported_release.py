@@ -30,10 +30,7 @@ def get_release() -> Dict[str, Any]:
 
 
 def get_atlas_connection_string() -> str:
-    password = os.environ["atlas_password"]
-    cnx_str = os.environ["atlas_connection_string"]
-
-    return cnx_str.format(password=password)
+    return os.environ["ATLAS_CONNECTION_STRING"]
 
 
 def mongo_client() -> pymongo.MongoClient:
@@ -44,12 +41,12 @@ def mongo_client() -> pymongo.MongoClient:
 def add_release_version(image: str, version: str) -> None:
     client = mongo_client()
 
-    database = os.environ["atlas_database"]
+    database = os.environ["ATLAS_DATABASE"]
     collection = client[database][image]
 
     year_from_now = datetime.datetime.now() + datetime.timedelta(days=365)
 
-    existing_entry = collection.find_one({}, {"version": version})
+    existing_entry = collection.find_one({"version": version})
     if existing_entry is not None:
         logging.info("Entry for version {} already present".format(version))
         return
@@ -72,18 +69,23 @@ def add_release_version(image: str, version: str) -> None:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--image", help="image to add a new supported version", type=str
+        "--image-name", help="image to add a new supported version", type=str
     )
     args = parser.parse_args()
 
-    if args.image not in VALID_IMAGES:
-        raise ValueError("Image {} not supported".format(args.image))
+    if args.image_name not in VALID_IMAGES:
+        print(
+            "Image {} not supported. Not adding release version.".format(
+                args.image_name
+            )
+        )
+        return 0
 
     # for now, there is just one version to add as a supported release.
-    version = get_release()[args.image]["version"]
-    logging.info("Adding new release: {} {}".format(args.image, version))
+    version = get_release()[args.image_name]["version"]
+    logging.info("Adding new release: {} {}".format(args.image_name, version))
 
-    add_release_version(args.image, version)
+    add_release_version(args.image_name, version)
 
     return 0
 

@@ -15,24 +15,24 @@ type errorOption struct{}
 
 func (e errorOption) ApplyOption(_ *mdbv1.MongoDBCommunity) {}
 
-func (e errorOption) GetResult() (reconcile.Result, error) {
-	return reconcile.Result{}, errors.Errorf("error")
+func (e errorOption) GetResult() (reconcile.Result, error, bool) {
+	return reconcile.Result{}, errors.Errorf("error"), false
 }
 
 type successOption struct{}
 
 func (s successOption) ApplyOption(_ *mdbv1.MongoDBCommunity) {}
 
-func (s successOption) GetResult() (reconcile.Result, error) {
-	return reconcile.Result{}, nil
+func (s successOption) GetResult() (reconcile.Result, error, bool) {
+	return reconcile.Result{}, nil, true
 }
 
 type retryOption struct{}
 
 func (r retryOption) ApplyOption(_ *mdbv1.MongoDBCommunity) {}
 
-func (r retryOption) GetResult() (reconcile.Result, error) {
-	return reconcile.Result{Requeue: true}, nil
+func (r retryOption) GetResult() (reconcile.Result, error, bool) {
+	return reconcile.Result{Requeue: true}, nil, false
 }
 
 func TestDetermineReconciliationResult(t *testing.T) {
@@ -44,7 +44,7 @@ func TestDetermineReconciliationResult(t *testing.T) {
 			successOption{},
 		}
 
-		res, err := determineReconciliationResult(opts)
+		res, err, _ := determineReconciliationResult(opts)
 		assert.NotNil(t, err)
 		assert.Equal(t, false, res.Requeue)
 		assert.Equal(t, time.Duration(0), res.RequeueAfter)
@@ -56,7 +56,7 @@ func TestDetermineReconciliationResult(t *testing.T) {
 			retryOption{},
 			successOption{},
 		}
-		res, err := determineReconciliationResult(opts)
+		res, err, _ := determineReconciliationResult(opts)
 		assert.NotNil(t, err)
 		assert.Equal(t, false, res.Requeue)
 		assert.Equal(t, time.Duration(0), res.RequeueAfter)
@@ -68,7 +68,7 @@ func TestDetermineReconciliationResult(t *testing.T) {
 			successOption{},
 			successOption{},
 		}
-		res, err := determineReconciliationResult(opts)
+		res, err, _ := determineReconciliationResult(opts)
 		assert.Nil(t, err)
 		assert.Equal(t, false, res.Requeue)
 		assert.Equal(t, time.Duration(0), res.RequeueAfter)
@@ -80,7 +80,7 @@ func TestDetermineReconciliationResult(t *testing.T) {
 			successOption{},
 			retryOption{},
 		}
-		res, err := determineReconciliationResult(opts)
+		res, err, _ := determineReconciliationResult(opts)
 		assert.Nil(t, err)
 		assert.Equal(t, true, res.Requeue)
 	})

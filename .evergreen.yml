@@ -39,15 +39,6 @@ functions:
         permissions: public-read
         content_type: text/plain
 
-  # This is a blocker for the release process. It will *always* fail and needs to be overriden
-  # if the release needs to proceed.
-  release_blocker:
-    - command: subprocess.exec
-      type: setup
-      params:
-        working_dir: mongodb-kubernetes-operator
-        binary: scripts/ci/release_blocker
-
   setup_kubernetes_environment:
     - command: subprocess.exec
       type: setup
@@ -98,7 +89,7 @@ functions:
     command: subprocess.exec
     type: setup
     params:
-      command: virtualenv --python /opt/python/3.7/bin/python3 ./venv
+      command: virtualenv --python /opt/python/3.9/bin/python3 ./venv
 
   python_requirements: &python_requirements
     command: subprocess.exec
@@ -124,20 +115,6 @@ functions:
         working_dir: mongodb-kubernetes-operator
         binary: scripts/ci/build_and_push_image_sonar.sh
 
-
-  add_supported_release:
-    - *python_venv
-    - *python_requirements
-    - command: subprocess.exec
-      type: setup
-      params:
-        working_dir: mongodb-kubernetes-operator
-        include_expansions_in_env:
-          - atlas_connection_string
-          - atlas_password
-          - atlas_database
-          - image_name
-        command: "${workdir}/venv/bin/python scripts/ci/add_supported_release.py --c ${image_name}"
 
 task_groups:
 - name: e2e_test_group
@@ -336,62 +313,6 @@ tasks:
         vars:
           test: replica_set_custom_role
 
-  - name: release_blocker
-    commands:
-      - func: clone
-      - func: release_blocker
-
-  - name: release_operator
-    commands:
-      - func: clone
-      - func: setup_virtualenv
-      - func: build_and_push_image_sonar
-        vars:
-          image_name: operator-ubi
-          release: true
-
-  - name: release_version_upgrade_post_start_hook
-    commands:
-      - func: clone
-      - func: setup_virtualenv
-      - func: build_and_push_image_sonar
-        vars:
-          image_name: version-post-start-hook-init
-          release: true
-
-
-  - name: release_readiness_probe
-    commands:
-      - func: clone
-      - func: setup_virtualenv
-      - func: build_and_push_image_sonar
-        vars:
-          image_name: readiness-probe-init
-          release: true
-
-  - name: release_agent_ubuntu
-    commands:
-      - func: clone
-      - func: setup_virtualenv
-      - func: build_and_push_image_sonar
-        vars:
-          image_name: agent-ubuntu
-          release: true
-      - func: add_supported_release
-        vars:
-          image_name: mongodb-agent
-
-  - name: release_agent_ubi
-    commands:
-      - func: clone
-      - func: setup_virtualenv
-      - func: build_and_push_image_sonar
-        vars:
-          image_name: agent-ubi
-          release: true
-      - func: add_supported_release
-        vars:
-          image_name: mongodb-agent
 
 buildvariants:
   - name: e2e_tests_ubuntu
@@ -399,7 +320,7 @@ buildvariants:
     expansions:
       distro: ubuntu
     run_on:
-      - ubuntu1604-build
+      - ubuntu1804-large
     depends_on:
       - name: build_operator_image
         variant: init_test_run
@@ -419,7 +340,7 @@ buildvariants:
     expansions:
       distro: ubi
     run_on:
-      - ubuntu1604-build
+      - ubuntu1804-large
     depends_on:
       - name: build_operator_image
         variant: init_test_run
@@ -437,7 +358,7 @@ buildvariants:
   - name: init_test_run
     display_name: init_test_run
     run_on:
-      - ubuntu1604-build
+      - ubuntu1804-small
     tasks:
       - name: build_operator_image
       - name: build_e2e_image
@@ -445,32 +366,3 @@ buildvariants:
       - name: build_agent_image_ubi
       - name: build_agent_image_ubuntu
       - name: build_readiness_probe_image
-
-  - name: release_blocker
-    display_name: release_blocker
-    run_on:
-      - ubuntu1604-packer  # Note: cheapest machine I found
-    tasks:
-      - name: release_blocker
-
-  - name: release_images_quay
-    display_name: release_images_quay
-    depends_on:
-      - name: release_blocker
-        variant: release_blocker
-      - name: build_operator_image
-        variant: init_test_run
-      - name: build_prehook_image
-        variant: init_test_run
-      - name: build_agent_image_ubuntu
-        variant: init_test_run
-      - name: build_agent_image_ubi
-        variant: init_test_run
-    run_on:
-      - ubuntu1604-test
-    tasks:
-    - name: release_operator
-    - name: release_version_upgrade_post_start_hook
-    - name: release_readiness_probe
-    - name: release_agent_ubuntu
-    - name: release_agent_ubi

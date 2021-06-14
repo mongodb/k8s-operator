@@ -39,7 +39,7 @@ members in a replica set.
 Consider the following example MongoDB resource definition:
 
 ```yaml
-apiVersion: mongodb.com/v1
+apiVersion: mongodbcommunity.mongodb.com/v1
 kind: MongoDBCommunity
 metadata:
   name: example-mongodb
@@ -56,7 +56,7 @@ To scale a replica set:
    Update `members` to the number of members that you want the replica set to have.
 
    ```yaml
-   apiVersion: mongodb.com/v1
+   apiVersion: mongodbcommunity.mongodb.com/v1
    kind: MongoDBCommunity
    metadata:
      name: example-mongodb
@@ -90,7 +90,7 @@ If you update `spec.version` to a later version, consider setting `spec.featureC
 Consider the following example MongoDB resource definition:
 
 ```yaml
-apiVersion: mongodb.com/v1
+apiVersion: mongodbcommunity.mongodb.com/v1
 kind: MongoDBCommunity
 metadata:
   name: example-mongodb
@@ -108,7 +108,7 @@ To upgrade this resource from `4.0.6` to `4.2.7`:
    b. Update `spec.featureCompatibilityVersion` to `4.0`.
 
    ```yaml
-   apiVersion: mongodb.com/v1
+   apiVersion: mongodbcommunity.mongodb.com/v1
    kind: MongoDBCommunity
    metadata:
      name: example-mongodb
@@ -165,7 +165,7 @@ To define a custom role:
 
    ```yaml
    ---
-   apiVersion: mongodb.com/v1
+   apiVersion: mongodbcommunity.mongodb.com/v1
    kind: MongoDBCommunity
    metadata:
      name: custom-role-mongodb

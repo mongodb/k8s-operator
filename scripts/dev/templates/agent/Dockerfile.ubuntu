@@ -1,6 +1,6 @@
 {% extends "Dockerfile.template" %}
 
-{% set base_image = "ubuntu:16.04" %}
+{% set base_image = "ubuntu:20.04" %}
 
 {% block packages -%}
 RUN apt-get -qq update \

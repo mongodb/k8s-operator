@@ -31,7 +31,7 @@ type Client interface {
 	// TODO: remove this function, add mongodb package which has GetAndUpdate function
 	GetAndUpdate(nsName types.NamespacedName, obj k8sClient.Object, updateFunc func()) error
 	configmap.GetUpdateCreateDeleter
-	service.GetUpdateCreator
+	service.GetUpdateCreateDeleter
 	secret.GetUpdateCreateDeleter
 	statefulset.GetUpdateCreateDeleter
 	pod.Getter
@@ -151,6 +151,17 @@ func (c client) UpdateService(service corev1.Service) error {
 // CreateService provides a thin wrapper and client.Client to create corev1.Service types
 func (c client) CreateService(service corev1.Service) error {
 	return c.Create(context.TODO(), &service)
+}
+
+// DeleteService provides a thin wrapper around client.Client to delete corev1.Service types
+func (c client) DeleteService(objectKey k8sClient.ObjectKey) error {
+	svc := corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      objectKey.Name,
+			Namespace: objectKey.Namespace,
+		},
+	}
+	return c.Delete(context.TODO(), &svc)
 }
 
 // GetStatefulSet provides a thin wrapper and client.Client to access appsv1.StatefulSet types

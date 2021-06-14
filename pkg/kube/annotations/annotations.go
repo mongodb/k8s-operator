@@ -26,13 +26,21 @@ const (
 	LastAppliedMongoDBVersion = "mongodb.com/v1.lastAppliedMongoDBVersion"
 )
 
-func GetAnnotation(object Versioned, key string) string {
+func GetAnnotation(object client.Object, key string) string {
 	value, ok := object.GetAnnotations()[key]
 	if !ok {
 		return ""
 	}
 
 	return value
+}
+
+// SetAnnotation updates an annotation of the given resource.
+func SetAnnotation(object client.Object, key, value string) {
+	if object.GetAnnotations() == nil {
+		object.SetAnnotations(map[string]string{})
+	}
+	object.GetAnnotations()[key] = value
 }
 
 func SetAnnotations(spec Versioned, annotations map[string]string, kubeClient client.Client) error {

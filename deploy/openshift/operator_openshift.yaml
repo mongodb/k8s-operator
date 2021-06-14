@@ -12,33 +12,33 @@ spec:
       labels:
         name: mongodb-kubernetes-operator
     spec:
-      serviceAccountName: mongodb-kubernetes-operator
       containers:
-        - name: mongodb-kubernetes-operator
-          image: quay.io/mongodb/mongodb-kubernetes-operator:0.6.0
-          command:
-          - mongodb-kubernetes-operator
-          imagePullPolicy: Always
-          env:
-            - name: WATCH_NAMESPACE
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.namespace
-            - name: POD_NAME
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.name
-            - name: MANAGED_SECURITY_CONTEXT
-              value: 'true'
-            - name: OPERATOR_NAME
-              value: "mongodb-kubernetes-operator"
-            - name: AGENT_IMAGE # The MongoDB Agent the operator will deploy to manage MongoDB deployments
-              value: quay.io/mongodb/mongodb-agent:10.29.0.6830-1
-            - name: READINESS_PROBE_IMAGE
-              value: quay.io/mongodb/mongodb-kubernetes-readinessprobe:1.0.3
-            - name: VERSION_UPGRADE_HOOK_IMAGE
-              value: quay.io/mongodb/mongodb-kubernetes-operator-version-upgrade-post-start-hook:1.0.2
-            - name: MONGODB_IMAGE
-              value: "library/mongo"
-            - name: MONGODB_REPO_URL
-              value: "registry.hub.docker.com"
+      - command:
+        - mongodb-kubernetes-operator
+        env:
+        - name: WATCH_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: MANAGED_SECURITY_CONTEXT
+          value: 'true'
+        - name: OPERATOR_NAME
+          value: mongodb-kubernetes-operator
+        - name: AGENT_IMAGE
+          value: quay.io/mongodb/mongodb-agent:10.29.0.6830-1
+        - name: READINESS_PROBE_IMAGE
+          value: quay.io/mongodb/mongodb-kubernetes-readinessprobe:1.0.4
+        - name: VERSION_UPGRADE_HOOK_IMAGE
+          value: quay.io/mongodb/mongodb-kubernetes-operator-version-upgrade-post-start-hook:1.0.2
+        - name: MONGODB_IMAGE
+          value: library/mongo
+        - name: MONGODB_REPO_URL
+          value: registry.hub.docker.com
+        image: quay.io/mongodb/mongodb-kubernetes-operator:0.6.1
+        imagePullPolicy: Always
+        name: mongodb-kubernetes-operator
+      serviceAccountName: mongodb-kubernetes-operator

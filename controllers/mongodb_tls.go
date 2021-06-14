@@ -5,6 +5,10 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/mongodb/mongodb-kubernetes-operator/controllers/watch"
+	kubernetesClient "github.com/mongodb/mongodb-kubernetes-operator/pkg/kube/client"
+	"go.uber.org/zap"
+
 	"github.com/pkg/errors"
 
 	"github.com/mongodb/mongodb-kubernetes-operator/controllers/construct"
@@ -31,18 +35,14 @@ const (
 )
 
 // validateTLSConfig will check that the configured ConfigMap and Secret exist and that they have the correct fields.
-func (r *ReplicaSetReconciler) validateTLSConfig(mdb mdbv1.MongoDBCommunity) (bool, error) {
-	if !mdb.Spec.Security.TLS.Enabled {
-		return true, nil
-	}
-
-	r.log.Info("Ensuring TLS is correctly configured")
+func validateTLSConfig(client kubernetesClient.Client, mdb mdbv1.MongoDBCommunity, secretWatcher *watch.ResourceWatcher, log *zap.SugaredLogger) (bool, error) {
+	log.Info("Ensuring TLS is correctly configured")
 
 	// Ensure CA ConfigMap exists
-	caData, err := configmap.ReadData(r.client, mdb.TLSConfigMapNamespacedName())
+	caData, err := configmap.ReadData(client, mdb.TLSConfigMapNamespacedName())
 	if err != nil {
 		if apiErrors.IsNotFound(err) {
-			r.log.Warnf(`CA ConfigMap "%s" not found`, mdb.TLSConfigMapNamespacedName())
+			log.Warnf(`CA ConfigMap "%s" not found`, mdb.TLSConfigMapNamespacedName())
 			return false, nil
 		}
 
@@ -51,15 +51,15 @@ func (r *ReplicaSetReconciler) validateTLSConfig(mdb mdbv1.MongoDBCommunity) (bo
 
 	// Ensure ConfigMap has a "ca.crt" field
 	if cert, ok := caData[tlsCACertName]; !ok || cert == "" {
-		r.log.Warnf(`ConfigMap "%s" should have a CA certificate in field "%s"`, mdb.TLSConfigMapNamespacedName(), tlsCACertName)
+		log.Warnf(`ConfigMap "%s" should have a CA certificate in field "%s"`, mdb.TLSConfigMapNamespacedName(), tlsCACertName)
 		return false, nil
 	}
 
 	// Ensure Secret exists
-	secretData, err := secret.ReadStringData(r.client, mdb.TLSSecretNamespacedName())
+	secretData, err := secret.ReadStringData(client, mdb.TLSSecretNamespacedName())
 	if err != nil {
 		if apiErrors.IsNotFound(err) {
-			r.log.Warnf(`Secret "%s" not found`, mdb.TLSSecretNamespacedName())
+			log.Warnf(`Secret "%s" not found`, mdb.TLSSecretNamespacedName())
 			return false, nil
 		}
 
@@ -68,18 +68,18 @@ func (r *ReplicaSetReconciler) validateTLSConfig(mdb mdbv1.MongoDBCommunity) (bo
 
 	// Ensure Secret has "tls.crt" and "tls.key" fields
 	if key, ok := secretData[tlsSecretKeyName]; !ok || key == "" {
-		r.log.Warnf(`Secret "%s" should have a key in field "%s"`, mdb.TLSSecretNamespacedName(), tlsSecretKeyName)
+		log.Warnf(`Secret "%s" should have a key in field "%s"`, mdb.TLSSecretNamespacedName(), tlsSecretKeyName)
 		return false, nil
 	}
 	if cert, ok := secretData[tlsSecretCertName]; !ok || cert == "" {
-		r.log.Warnf(`Secret "%s" should have a certificate in field "%s"`, mdb.TLSSecretNamespacedName(), tlsSecretKeyName)
+		log.Warnf(`Secret "%s" should have a certificate in field "%s"`, mdb.TLSSecretNamespacedName(), tlsSecretKeyName)
 		return false, nil
 	}
 
 	// Watch certificate-key secret to handle rotations
-	r.secretWatcher.Watch(mdb.TLSSecretNamespacedName(), mdb.NamespacedName())
+	secretWatcher.Watch(mdb.TLSSecretNamespacedName(), mdb.NamespacedName())
 
-	r.log.Infof("Successfully validated TLS config")
+	log.Infof("Successfully validated TLS config")
 	return true, nil
 }
 

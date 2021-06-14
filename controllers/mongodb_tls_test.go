@@ -4,6 +4,8 @@ import (
 	"context"
 	"testing"
 
+	"go.uber.org/zap"
+
 	corev1 "k8s.io/api/core/v1"
 
 	mdbv1 "github.com/mongodb/mongodb-kubernetes-operator/api/v1"
@@ -16,7 +18,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/types"
 	k8sClient "sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 func TestStatefulSet_IsCorrectlyConfiguredWithTLS(t *testing.T) {
@@ -27,8 +28,7 @@ func TestStatefulSet_IsCorrectlyConfiguredWithTLS(t *testing.T) {
 	assert.NoError(t, err)
 
 	r := NewReconciler(mgr)
-	res, err := r.Reconcile(context.TODO(), reconcile.Request{NamespacedName: types.NamespacedName{Namespace: mdb.Namespace, Name: mdb.Name}})
-	assertReconciliationSuccessful(t, res, err)
+	reconcileThroughAllStates(t, r, mdb)
 
 	sts := appsv1.StatefulSet{}
 	err = mgr.GetClient().Get(context.TODO(), types.NamespacedName{Name: mdb.Name, Namespace: mdb.Namespace}, &sts)
@@ -85,9 +85,8 @@ func TestAutomationConfig_IsCorrectlyConfiguredWithTLS(t *testing.T) {
 		err := createTLSSecretAndConfigMap(client, mdb)
 		assert.NoError(t, err)
 
-		tlsModification, err := getTLSConfigModification(client, mdb)
 		assert.NoError(t, err)
-		ac, err := buildAutomationConfig(mdb, automationconfig.Auth{}, automationconfig.AutomationConfig{}, tlsModification)
+		ac, err := buildAutomationConfig(client, mdb)
 		assert.NoError(t, err)
 
 		return ac
@@ -156,7 +155,7 @@ func TestTLSOperatorSecret(t *testing.T) {
 
 		r := NewReconciler(client.NewManagerWithClient(c))
 
-		err = r.ensureTLSResources(mdb)
+		err = ensureTLSResources(r.client, mdb, zap.S())
 		assert.NoError(t, err)
 
 		// Operator-managed secret should have been created and contain the
@@ -184,7 +183,7 @@ func TestTLSOperatorSecret(t *testing.T) {
 
 		r := NewReconciler(client.NewManagerWithClient(k8sclient))
 
-		err = r.ensureTLSResources(mdb)
+		err = ensureTLSResources(r.client, mdb, zap.S())
 		assert.NoError(t, err)
 
 		// Operator-managed secret should have been updated with the concatenated

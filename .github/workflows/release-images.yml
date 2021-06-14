@@ -1,0 +1,92 @@
+name: Release Images
+
+on:
+  pull_request_review:
+    types: [submitted]
+
+jobs:
+  release-images:
+    runs-on: ubuntu-latest
+    if: startsWith(github.event.pull_request.title, 'Release MongoDB Kubernetes Operator') && github.event.review.state == 'approved'
+    strategy:
+      matrix:
+        include:
+          - pipeline-argument: operator-ubi
+            release-key: mongodb-kubernetes-operator
+          - pipeline-argument: version-post-start-hook-init
+            release-key: version-upgrade-hook
+          - pipeline-argument: readiness-probe-init
+            release-key: readiness-probe
+          - pipeline-argument: agent-ubi
+            release-key: mongodb-agent
+          - pipeline-argument: agent-ubuntu
+            release-key: mongodb-agent
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v2
+      - name: Setup Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.8'
+          architecture: 'x64'
+
+      - uses: actions/cache@v2
+        with:
+          path: ~/.cache/pip
+          key: ${{ hashFiles('requirements.txt') }}
+
+      - name: Install Python Dependencies
+        run: pip install -r requirements.txt
+      - name: Determine if release is needed
+        id: release_status
+        run: |
+          OUTPUT=$(scripts/ci/determine_required_releases.py ${{ matrix.release-key }})
+          echo "::set-output name=OUTPUT::$OUTPUT"
+
+      - name: Login to Quay.io
+        uses: docker/login-action@v1
+        with:
+          registry: quay.io
+          username: ${{ secrets.QUAY_USERNAME }}
+          password: ${{ secrets.QUAY_ROBOT_TOKEN }}
+
+      - name: Publish Image To Quay
+        if: steps.release_status.outputs.OUTPUT == 'unreleased'
+        run: python pipeline.py --image-name ${{ matrix.pipeline-argument }} --release true
+        env:
+          MONGODB_COMMUNITY_CONFIG: "${{ github.workspace }}/scripts/ci/config.json"
+
+      - name: Add Supported Release
+        if: steps.release_status.outputs.OUTPUT == 'unreleased'
+        run: python scripts/ci/add_supported_release.py --image-name ${{ matrix.release-key }}
+        env:
+          ATLAS_DATABASE: "${{ secrets.ATLAS_DATABASE }}"
+          ATLAS_CONNECTION_STRING: "${{ secrets.ATLAS_CONNECTION_STRING }}"
+
+  merge-release-pr-and-draft-github-release:
+    runs-on: ubuntu-latest
+    needs: [release-images]
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v2
+    - name: Determine Release Tag
+      id: release_tag
+      run: |
+        OUTPUT=$(jq -r '."mongodb-kubernetes-operator"' < $GITHUB_WORKSPACE/release.json)
+        echo "::set-output name=OUTPUT::$OUTPUT"
+    - name: Merge Release PR
+      uses: pascalgn/automerge-action@v0.14.2
+      env:
+        GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+        MERGE_LABELS: ""
+        MERGE_DELETE_BRANCH: true
+        MERGE_METHOD: squash
+        MERGE_COMMIT_MESSAGE: "Release MongoDB Kubernetes Operator v${{ steps.release_tag.outputs.OUTPUT }}"
+    - name: Create Github Release
+      uses: ncipollo/release-action@v1
+      with:
+        tag: ${{ steps.release_tag.outputs.OUTPUT }}
+        name: MongoDB Kubernetes Operator
+        bodyFile: "${{ github.workspace }}/docs/RELEASE_NOTES.md"
+        draft: true
+        token: ${{ secrets.GITHUB_TOKEN }}

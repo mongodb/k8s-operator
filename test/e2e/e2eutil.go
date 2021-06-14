@@ -4,23 +4,15 @@ import (
 	"context"
 	"fmt"
 	"reflect"
-	"testing"
-	"time"
 
 	"github.com/mongodb/mongodb-kubernetes-operator/pkg/util/envvar"
 
-	"github.com/pkg/errors"
-
 	mdbv1 "github.com/mongodb/mongodb-kubernetes-operator/api/v1"
-	"github.com/mongodb/mongodb-kubernetes-operator/pkg/kube/statefulset"
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apiErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/wait"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	k8sClient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -45,127 +37,6 @@ func UpdateMongoDBResource(original *mdbv1.MongoDBCommunity, updateFunc func(*md
 	updateFunc(original)
 
 	return TestClient.Update(context.TODO(), original)
-}
-
-// WaitForConfigMapToExist waits until a ConfigMap of the given name exists
-// using the provided retryInterval and timeout
-func WaitForConfigMapToExist(cmName string, retryInterval, timeout time.Duration) (corev1.ConfigMap, error) {
-	cm := corev1.ConfigMap{}
-	return cm, waitForRuntimeObjectToExist(cmName, retryInterval, timeout, &cm, OperatorNamespace)
-}
-
-// WaitForSecretToExist waits until a Secret of the given name exists
-// using the provided retryInterval and timeout
-func WaitForSecretToExist(cmName string, retryInterval, timeout time.Duration, namespace string) (corev1.Secret, error) {
-	s := corev1.Secret{}
-	return s, waitForRuntimeObjectToExist(cmName, retryInterval, timeout, &s, namespace)
-}
-
-// WaitForMongoDBToReachPhase waits until the given MongoDB resource reaches the expected phase
-func WaitForMongoDBToReachPhase(t *testing.T, mdb *mdbv1.MongoDBCommunity, phase mdbv1.Phase, retryInterval, timeout time.Duration) error {
-	return waitForMongoDBCondition(mdb, retryInterval, timeout, func(db mdbv1.MongoDBCommunity) bool {
-		t.Logf("current phase: %s, waiting for phase: %s", db.Status.Phase, phase)
-		return db.Status.Phase == phase
-	})
-}
-
-// waitForMongoDBCondition polls and waits for a given condition to be true
-func waitForMongoDBCondition(mdb *mdbv1.MongoDBCommunity, retryInterval, timeout time.Duration, condition func(mdbv1.MongoDBCommunity) bool) error {
-	mdbNew := mdbv1.MongoDBCommunity{}
-	return wait.Poll(retryInterval, timeout, func() (done bool, err error) {
-		err = TestClient.Get(context.TODO(), mdb.NamespacedName(), &mdbNew)
-		if err != nil {
-			return false, err
-		}
-		ready := condition(mdbNew)
-		return ready, nil
-	})
-}
-
-// WaitForStatefulSetToExist waits until a StatefulSet of the given name exists
-// using the provided retryInterval and timeout
-func WaitForStatefulSetToExist(stsName string, retryInterval, timeout time.Duration, namespace string) (appsv1.StatefulSet, error) {
-	sts := appsv1.StatefulSet{}
-	return sts, waitForRuntimeObjectToExist(stsName, retryInterval, timeout, &sts, namespace)
-}
-
-// WaitForStatefulSetToHaveUpdateStrategy waits until all replicas of the StatefulSet with the given name
-// have reached the ready status
-func WaitForStatefulSetToHaveUpdateStrategy(t *testing.T, mdb *mdbv1.MongoDBCommunity, strategy appsv1.StatefulSetUpdateStrategyType, retryInterval, timeout time.Duration) error {
-	return waitForStatefulSetCondition(t, mdb, retryInterval, timeout, func(sts appsv1.StatefulSet) bool {
-		return sts.Spec.UpdateStrategy.Type == strategy
-	})
-}
-
-// WaitForStatefulSetToBeReady waits until all replicas of the StatefulSet with the given name
-// have reached the ready status
-func WaitForStatefulSetToBeReady(t *testing.T, mdb *mdbv1.MongoDBCommunity, retryInterval, timeout time.Duration) error {
-	return waitForStatefulSetCondition(t, mdb, retryInterval, timeout, func(sts appsv1.StatefulSet) bool {
-		return statefulset.IsReady(sts, mdb.Spec.Members)
-	})
-}
-
-// waitForStatefulSetCondition waits until all replicas of the StatefulSet with the given name
-// is not ready.
-func WaitForStatefulSetToBeUnready(t *testing.T, mdb *mdbv1.MongoDBCommunity, retryInterval, timeout time.Duration) error {
-	return waitForStatefulSetCondition(t, mdb, retryInterval, timeout, func(sts appsv1.StatefulSet) bool {
-		return !statefulset.IsReady(sts, mdb.Spec.Members)
-	})
-}
-
-// WaitForStatefulSetToBeReadyAfterScaleDown waits for just the ready replicas to be correct
-// and does not account for the updated replicas
-func WaitForStatefulSetToBeReadyAfterScaleDown(t *testing.T, mdb *mdbv1.MongoDBCommunity, retryInterval, timeout time.Duration) error {
-	return waitForStatefulSetCondition(t, mdb, retryInterval, timeout, func(sts appsv1.StatefulSet) bool {
-		return int32(mdb.Spec.Members) == sts.Status.ReadyReplicas
-	})
-}
-
-func waitForStatefulSetCondition(t *testing.T, mdb *mdbv1.MongoDBCommunity, retryInterval, timeout time.Duration, condition func(set appsv1.StatefulSet) bool) error {
-	_, err := WaitForStatefulSetToExist(mdb.Name, retryInterval, timeout, mdb.Namespace)
-	if err != nil {
-		return errors.Errorf("error waiting for stateful set to be created: %s", err)
-	}
-
-	sts := appsv1.StatefulSet{}
-	return wait.Poll(retryInterval, timeout, func() (done bool, err error) {
-		err = TestClient.Get(context.TODO(), mdb.NamespacedName(), &sts)
-		if err != nil {
-			return false, err
-		}
-		t.Logf("Waiting for %s to have %d replicas. Current ready replicas: %d, Current updated replicas: %d, Current generation: %d, Observed Generation: %d\n",
-			mdb.Name, mdb.Spec.Members, sts.Status.ReadyReplicas, sts.Status.UpdatedReplicas, sts.Generation, sts.Status.ObservedGeneration)
-		ready := condition(sts)
-		return ready, nil
-	})
-}
-
-func WaitForPodReadiness(t *testing.T, isReady bool, containerName string, timeout time.Duration, pod corev1.Pod) error {
-	return wait.Poll(time.Second*3, timeout, func() (done bool, err error) {
-		err = TestClient.Get(context.TODO(), types.NamespacedName{Name: pod.Name, Namespace: pod.Namespace}, &pod)
-		if err != nil {
-			return false, err
-		}
-		for _, status := range pod.Status.ContainerStatuses {
-			t.Logf("%s (%s), ready: %v\n", pod.Name, status.Name, status.Ready)
-			if status.Name == containerName && status.Ready == isReady {
-				return true, nil
-			}
-		}
-		return false, nil
-	})
-}
-
-// waitForRuntimeObjectToExist waits until a runtime.Object of the given name exists
-// using the provided retryInterval and timeout provided.
-func waitForRuntimeObjectToExist(name string, retryInterval, timeout time.Duration, obj client.Object, namespace string) error {
-	return wait.Poll(retryInterval, timeout, func() (done bool, err error) {
-		err = TestClient.Get(context.TODO(), types.NamespacedName{Name: name, Namespace: namespace}, obj)
-		if err != nil {
-			return false, client.IgnoreNotFound(err)
-		}
-		return true, nil
-	})
 }
 
 func NewTestMongoDB(ctx *Context, name string, namespace string) (mdbv1.MongoDBCommunity, mdbv1.MongoDBUser) {

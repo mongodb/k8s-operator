@@ -56,7 +56,7 @@ func (m mongoUriOption) ApplyOption(mdb *mdbv1.MongoDBCommunity) {
 	mdb.Status.MongoURI = m.mongoUri
 }
 
-func (m mongoUriOption) GetResult() (reconcile.Result, error) {
+func (m mongoUriOption) GetResult() (reconcile.Result, error, bool) {
 	return result.OK()
 }
 
@@ -94,7 +94,7 @@ func (m messageOption) ApplyOption(mdb *mdbv1.MongoDBCommunity) {
 	}
 }
 
-func (m messageOption) GetResult() (reconcile.Result, error) {
+func (m messageOption) GetResult() (reconcile.Result, error, bool) {
 	return result.OK()
 }
 
@@ -127,7 +127,7 @@ func (o *optionBuilder) withMessage(severityLevel severity, msg string) *optionB
 }
 
 func (o *optionBuilder) withFailedPhase() *optionBuilder {
-	return o.withPhase(mdbv1.Failed, 0)
+	return o.withPhase(mdbv1.Failed, 5)
 }
 
 func (o *optionBuilder) withPendingPhase(retryAfter int) *optionBuilder {
@@ -147,15 +147,15 @@ func (p phaseOption) ApplyOption(mdb *mdbv1.MongoDBCommunity) {
 	mdb.Status.Phase = p.phase
 }
 
-func (p phaseOption) GetResult() (reconcile.Result, error) {
+func (p phaseOption) GetResult() (reconcile.Result, error, bool) {
 	if p.phase == mdbv1.Running {
 		return result.OK()
 	}
 	if p.phase == mdbv1.Pending {
-		return result.Retry(p.retryAfter)
+		return result.RetryState(p.retryAfter)
 	}
 	if p.phase == mdbv1.Failed {
-		return result.Failed()
+		return result.FailedState()
 	}
 	return result.OK()
 }
@@ -168,7 +168,7 @@ func (a mongoDBReplicasOption) ApplyOption(mdb *mdbv1.MongoDBCommunity) {
 	mdb.Status.CurrentMongoDBMembers = a.mongoDBMembers
 }
 
-func (a mongoDBReplicasOption) GetResult() (reconcile.Result, error) {
+func (a mongoDBReplicasOption) GetResult() (reconcile.Result, error, bool) {
 	return result.OK()
 }
 
@@ -180,6 +180,6 @@ func (s statefulSetReplicasOption) ApplyOption(mdb *mdbv1.MongoDBCommunity) {
 	mdb.Status.CurrentStatefulSetReplicas = s.replicas
 }
 
-func (s statefulSetReplicasOption) GetResult() (reconcile.Result, error) {
+func (s statefulSetReplicasOption) GetResult() (reconcile.Result, error, bool) {
 	return result.OK()
 }

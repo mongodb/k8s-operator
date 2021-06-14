@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"net/http"
+	"time"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -11,6 +12,7 @@ import (
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	k8sClient "sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/config/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
@@ -125,4 +127,11 @@ func (m *MockedManager) AddReadyzCheck(name string, check healthz.Checker) error
 
 func (m *MockedManager) GetLogger() logr.Logger {
 	return nil
+}
+
+func (m *MockedManager) GetControllerOptions() v1alpha1.ControllerConfigurationSpec {
+	var duration = time.Duration(0)
+	return v1alpha1.ControllerConfigurationSpec{
+		CacheSyncTimeout: &duration,
+	}
 }

@@ -1,0 +1,33 @@
+name: Create Release PR
+on:
+  workflow_dispatch
+
+jobs:
+  create-release-pr:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v2
+      - name: Determine Release Version
+        id: release_version
+        run: |
+          OUTPUT=$(jq -r '."mongodb-kubernetes-operator"' < $GITHUB_WORKSPACE/release.json)
+          echo "::set-output name=OUTPUT::$OUTPUT"
+          DATE=$(date '+%Y-%m-%d-%H-%M-%S')
+          echo "::set-output name=DATE::$DATE"
+      - uses: actions/setup-python@v2
+        with:
+          python-version: '3.6'
+          architecture: 'x64'
+      - run: pip install -r requirements.txt
+      - name: Create Release PR
+        uses: technote-space/create-pr-action@v2
+        with:
+          EXECUTE_COMMANDS: |
+            python scripts/ci/update_release.py
+          COMMIT_MESSAGE: 'Release Operator v${{ steps.release_version.outputs.OUTPUT }}'
+          COMMIT_NAME: 'GitHub Actions'
+          COMMIT_EMAIL: 'support@mongodb.com'
+          # include date in the pr branch name to ensure duplicate branches to not get created.
+          PR_BRANCH_NAME: 'release-v${{steps.release_version.outputs.OUTPUT}}-${{ steps.release_version.outputs.DATE }}'
+          PR_TITLE: 'Release MongoDB Kubernetes Operator v${{ steps.release_version.outputs.OUTPUT }}'

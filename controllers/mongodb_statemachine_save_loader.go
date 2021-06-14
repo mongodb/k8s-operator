@@ -97,7 +97,6 @@ func (r *ReplicaSetReconciler) SaveNextState(nsName types.NamespacedName, stateN
 		}
 		return err
 	}
-
 	return nil
 
 }

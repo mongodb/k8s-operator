@@ -76,7 +76,7 @@ To secure connections to MongoDB resources using TLS:
    - `spec.security.tls.caConfigMapRef.name`: Name of the Kubernetes ConfigMap that contains the Certificate Authority certificate used to sign the server certificate that you created in the [prerequisites](#prerequisites-1).
 
    ```yaml
-   apiVersion: mongodb.com/v1
+   apiVersion: mongodbcommunity.mongodb.com/v1
    kind: MongoDBCommunity
    metadata:
      name: example-mongodb

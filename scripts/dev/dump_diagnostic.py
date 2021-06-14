@@ -1,13 +1,13 @@
 import os
 import shutil
 import yaml
-from typing import Dict, TextIO, List
+from typing import Dict, TextIO, List, Union
 from base64 import b64decode
 import json
 import k8s_request_data
 
 
-def clean_nones(value: Dict) -> Dict:
+def clean_nones(value: Dict) -> Union[List, Dict]:
     """
     Recursively remove all None values from dictionaries and lists, and returns
     the result as a new dictionary or list.
@@ -41,10 +41,17 @@ def dump_persistent_volume(diagnostic_file: TextIO) -> None:
 
 
 def dump_stateful_sets_namespaced(diagnostic_file: TextIO, namespace: str) -> None:
-    sst = k8s_request_data.get_stateful_sets_namespaced(namespace)
-    if sst is not None:
+    sts = k8s_request_data.get_stateful_sets_namespaced(namespace)
+    if sts is not None:
         diagnostic_file.write(header("Stateful Sets"))
-        diagnostic_file.write(yaml.dump(clean_nones(sst)))
+        diagnostic_file.write(yaml.dump(clean_nones(sts)))
+
+
+def dump_mongodbcommunity_namespaced(diagnostic_file: TextIO, namespace: str) -> None:
+    mdb = k8s_request_data.get_all_mongodb_namespaced(namespace)
+    if mdb is not None:
+        diagnostic_file.write(header("MongoDBCommunity"))
+        diagnostic_file.write(yaml.dump(clean_nones(mdb)))
 
 
 def dump_pod_log_namespaced(namespace: str, name: str, containers: list) -> None:
@@ -115,6 +122,7 @@ def dump_all(namespace: str) -> None:
     with open(
         "logs/e2e/diagnostics.txt", mode="w", encoding="utf-8"
     ) as diagnostic_file:
+        dump_mongodbcommunity_namespaced(diagnostic_file, namespace)
         dump_persistent_volume(diagnostic_file)
         dump_stateful_sets_namespaced(diagnostic_file, namespace)
         dump_pods_and_logs_namespaced(diagnostic_file, namespace)

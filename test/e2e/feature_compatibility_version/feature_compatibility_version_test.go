@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/mongodb/mongodb-kubernetes-operator/test/e2e/util/wait"
+
 	. "github.com/mongodb/mongodb-kubernetes-operator/test/e2e/util/mongotester"
 
 	e2eutil "github.com/mongodb/mongodb-kubernetes-operator/test/e2e"
@@ -49,7 +51,7 @@ func TestFeatureCompatibilityVersion(t *testing.T) {
 	t.Run("MongoDB is reachable while version is upgraded", func(t *testing.T) {
 		defer tester.StartBackgroundConnectivityTest(t, time.Second*10)()
 		t.Run("Test Version can be upgraded", mongodbtests.ChangeVersion(&mdb, "4.2.6"))
-		t.Run("Stateful Set Reaches Ready State, after Upgrading", mongodbtests.StatefulSetBecomesReady(&mdb))
+		t.Run("Stateful Set Reaches Ready State, after Upgrading", mongodbtests.StatefulSetBecomesReady(&mdb, wait.Timeout(20*time.Minute)))
 	})
 
 	t.Run("Test Basic Connectivity after upgrade has completed", tester.ConnectivitySucceeds())
@@ -59,7 +61,7 @@ func TestFeatureCompatibilityVersion(t *testing.T) {
 	t.Run("MongoDB is reachable while version is downgraded", func(t *testing.T) {
 		defer tester.StartBackgroundConnectivityTest(t, time.Second*10)()
 		t.Run("Test Version can be downgraded", mongodbtests.ChangeVersion(&mdb, "4.0.6"))
-		t.Run("Stateful Set Reaches Ready State, after Upgrading", mongodbtests.StatefulSetBecomesReady(&mdb))
+		t.Run("Stateful Set Reaches Ready State, after Upgrading", mongodbtests.StatefulSetBecomesReady(&mdb, wait.Timeout(20*time.Minute)))
 	})
 
 	t.Run("Test FeatureCompatibilityVersion, after downgrade, is 4.0", tester.HasFCV("4.0", 3))

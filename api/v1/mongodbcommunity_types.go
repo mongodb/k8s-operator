@@ -339,7 +339,7 @@ type Authentication struct {
 	// +optional
 	// +kubebuilder:default:=true
 	// +nullable
-	IgnoreUnknownUsers *bool `json:"ignoreUnknownUsers"`
+	IgnoreUnknownUsers *bool `json:"ignoreUnknownUsers,omitempty"`
 }
 
 // +kubebuilder:validation:Enum=SCRAM
