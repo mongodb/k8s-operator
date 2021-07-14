@@ -3,6 +3,9 @@ package client
 import (
 	"context"
 
+	mdbv1 "github.com/mongodb/mongodb-kubernetes-operator/api/v1"
+	"github.com/mongodb/mongodb-kubernetes-operator/pkg/kube/mongodbcommunity"
+
 	"github.com/mongodb/mongodb-kubernetes-operator/pkg/kube/pod"
 
 	"github.com/mongodb/mongodb-kubernetes-operator/pkg/kube/configmap"
@@ -32,10 +35,21 @@ type Client interface {
 	secret.GetUpdateCreateDeleter
 	statefulset.GetUpdateCreateDeleter
 	pod.Getter
+	mongodbcommunity.Getter
 }
 
 type client struct {
 	k8sClient.Client
+}
+
+// GetMongoDBCommunity is a thin wrapper around client.Client to access an mdbv1.MongoDBCommunity.
+func (c client) GetMongoDBCommunity(objectKey k8sClient.ObjectKey) (mdbv1.MongoDBCommunity, error) {
+	mdb := mdbv1.MongoDBCommunity{}
+	err := c.Get(context.TODO(), objectKey, &mdb)
+	if err != nil {
+		return mdbv1.MongoDBCommunity{}, err
+	}
+	return mdb, nil
 }
 
 // GetAndUpdate fetches the most recent version of the runtime.Object with the provided
