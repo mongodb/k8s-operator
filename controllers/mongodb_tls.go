@@ -161,6 +161,11 @@ func tlsConfigModification(mdb mdbv1.MongoDBCommunity, certKey string) automatio
 		mode = automationconfig.TLSModePreferred
 	}
 
+	allowConnecWithoutCertif, ok := mdb.Spec.AdditionalMongodConfig.Object["net.tls.allowConnectionsWithoutCertificates"]
+	if !ok {
+		allowConnecWithoutCertif = true
+	}
+
 	return func(config *automationconfig.AutomationConfig) {
 		// Configure CA certificate for agent
 		config.TLSConfig.CAFilePath = caCertificatePath
@@ -171,7 +176,7 @@ func tlsConfigModification(mdb mdbv1.MongoDBCommunity, certKey string) automatio
 			args.Set("net.tls.mode", mode)
 			args.Set("net.tls.CAFile", caCertificatePath)
 			args.Set("net.tls.certificateKeyFile", certificateKeyPath)
-			args.Set("net.tls.allowConnectionsWithoutCertificates", true)
+			args.Set("net.tls.allowConnectionsWithoutCertificates", allowConnecWithoutCertif)
 		}
 	}
 }

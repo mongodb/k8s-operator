@@ -145,6 +145,32 @@ func TestAutomationConfig_IsCorrectlyConfiguredWithTLS(t *testing.T) {
 			assert.True(t, process.Args26.Get("net.tls.allowConnectionsWithoutCertificates").MustBool())
 		}
 	})
+
+	t.Run("With TLS enabled, requires connection with certificates only, rollout completed", func(t *testing.T) {
+		mdb := newTestReplicaSetWithTLS()
+
+		if mdb.Spec.AdditionalMongodConfig.Object == nil {
+			mdb.Spec.AdditionalMongodConfig.Object = make(map[string]interface{})
+		}
+		mdb.Spec.AdditionalMongodConfig.Object["net.tls.allowConnectionsWithoutCertificates"] = false
+
+		ac := createAC(mdb)
+
+		assert.Equal(t, &automationconfig.TLS{
+			CAFilePath:            tlsCAMountPath + tlsCACertName,
+			ClientCertificateMode: automationconfig.ClientCertificateModeOptional,
+		}, ac.TLSConfig)
+
+		for _, process := range ac.Processes {
+			operatorSecretFileName := tlsOperatorSecretFileName("CERT\nKEY")
+
+			assert.Equal(t, automationconfig.TLSModeRequired, process.Args26.Get("net.tls.mode").Data())
+			assert.Equal(t, tlsOperatorSecretMountPath+operatorSecretFileName, process.Args26.Get("net.tls.certificateKeyFile").Data())
+			assert.Equal(t, tlsCAMountPath+tlsCACertName, process.Args26.Get("net.tls.CAFile").Data())
+			assert.False(t, process.Args26.Get("net.tls.allowConnectionsWithoutCertificates").MustBool())
+		}
+	})
+
 }
 
 func TestTLSOperatorSecret(t *testing.T) {

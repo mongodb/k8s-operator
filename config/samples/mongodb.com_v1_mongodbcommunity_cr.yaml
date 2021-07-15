@@ -10,6 +10,12 @@ spec:
   security:
     authentication:
       modes: ["SCRAM"]
+    tls:
+      enabled: true
+      certificateKeySecretRef:
+        name: tls-secret-name
+      caConfigMapRef:
+        name: tls-ca-configmap-name
   users:
     - name: my-user
       db: admin
@@ -23,6 +29,7 @@ spec:
       scramCredentialsSecretName: my-scram
   additionalMongodConfig:
     storage.wiredTiger.engineConfig.journalCompressor: zlib
+    net.tls.allowConnectionsWithoutCertificates: false
 
 # the user credentials will be generated from this secret
 # once the credentials are generated, this secret is no longer required
