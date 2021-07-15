@@ -85,7 +85,7 @@ images:
 
         output:
           - registry: $(inputs.params.registry)/$(inputs.params.agent_image)
-            tag: $(inputs.params.version_id)-context
+            tag: $(inputs.params.agent_version)-context
 
       - name: agent-ubuntu-release
         task_type: docker_build
@@ -103,7 +103,7 @@ images:
 
         output:
           - registry: $(inputs.params.registry)/$(inputs.params.agent_image)
-            tag: $(inputs.params.version_id)
+            tag: $(inputs.params.agent_version)
 
   - name: agent-ubi
     vars:
@@ -189,7 +189,7 @@ images:
 
         output:
           - registry: $(inputs.params.registry)/$(inputs.params.agent_image)
-            tag: $(inputs.params.version_id)-context
+            tag: $(inputs.params.agent_version)-context
 
       - name: agent-ubi-release
         task_type: docker_build
@@ -205,7 +205,7 @@ images:
 
         output:
           - registry: $(inputs.params.registry)/$(inputs.params.agent_image)
-            tag: $(inputs.params.version_id)
+            tag: $(inputs.params.agent_version)
 
   - name: readiness-probe-init
     vars:
