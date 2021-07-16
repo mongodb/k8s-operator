@@ -4,7 +4,7 @@ kind: MongoDBCommunity
 metadata:
   name: example-mongodb
 spec:
-  members: 3
+  members: 2
   type: ReplicaSet
   version: "4.2.6"
   security:
@@ -25,17 +25,34 @@ spec:
     storage.wiredTiger.engineConfig.journalCompressor: zlib
   statefulSet:
     spec:
+      selector:
+        matchLabels:
+          mongodb: m1
       template:
+        metadata:
+          labels:
+            mongodb: m1
         spec:
           affinity:
             podAntiAffinity:
+              requiredDuringSchedulingIgnoredDuringExecution:
+                - labelSelector:
+                    matchExpressions:
+                      - key: "mongodb"
+                        operator: In
+                        values:
+                          - m1
+                  topologyKey: topology.kubernetes.io/hostname
               preferredDuringSchedulingIgnoredDuringExecution:
                 - weight: 100
                   podAffinityTerm:
+                    labelSelector:
+                      matchExpressions:
+                        - key: "mongodb"
+                          operator: In
+                          values:
+                            - m1
                     topologyKey: topology.kubernetes.io/zone
-                - weight: 50
-                  podAffinityTerm:
-                    topologyKey: kubernetes.io/hostname
       volumeClaimTemplates:
         - metadata:
             name: data-volume
@@ -43,7 +60,7 @@ spec:
             accessModes: ["ReadWriteOnce"]
             resources:
               requests:
-                storage: 50Gi
+                storage: 10Gi
 
 # the user credentials will be generated from this secret
 # once the credentials are generated, this secret is no longer required
